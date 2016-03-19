@@ -1,6 +1,9 @@
 package io.vertx.todo;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -9,9 +12,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/**
- * @author Alexandru Somai
- *         date 3/17/16
+/*
+ * @author <a href="mailto:pmlopes@gmail.com">Paulo Lopes</a>
  */
 @RunWith(VertxUnitRunner.class)
 public class TodoRESTTest {
@@ -30,15 +32,29 @@ public class TodoRESTTest {
     }
 
     @Test
-    public void testMyApplication(TestContext context) {
+    public void testGetAllTodos(TestContext context) {
         final Async async = context.async();
 
-        vertx.createHttpClient().getNow(8080, "localhost", "/",
-                response -> {
+        vertx.createHttpClient().getNow(8080, "localhost", "/todos",
+                response -> response.handler(body -> {
+                    context.assertEquals(body.toJsonArray(), new JsonArray());
+                    async.complete();
+                }));
+    }
+
+    @Test
+    public void testAddTodo(TestContext context) {
+        final Async async = context.async();
+
+        HttpClientRequest request = vertx.createHttpClient().post(8080, "localhost", "/todos",
+                response ->
                     response.handler(body -> {
-                        context.assertTrue(body.toString().equals("Hello World!"));
+                        JsonObject jsonObject = body.toJsonObject();
+                        context.assertEquals(jsonObject.getString("title"), "title");
+                        context.assertEquals(jsonObject.getBoolean("completed"), false);
+                        context.assertTrue(jsonObject.containsKey("url"));
                         async.complete();
-                    });
-                });
+                    }));
+        request.end(new JsonObject().put("title", "title").encodePrettily());
     }
 }
