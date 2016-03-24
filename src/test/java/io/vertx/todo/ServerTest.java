@@ -18,14 +18,14 @@ import org.junit.runner.RunWith;
  */
 @RunWith(VertxUnitRunner.class)
 @Ignore
-public class TodoRESTTest {
+public class ServerTest {
 
     private Vertx vertx;
 
     @Before
     public void setUp(TestContext context) {
         vertx = Vertx.vertx();
-        vertx.deployVerticle(TodoREST.class.getName(), context.asyncAssertSuccess());
+        vertx.deployVerticle(Server.class.getName(), context.asyncAssertSuccess());
     }
 
     @After

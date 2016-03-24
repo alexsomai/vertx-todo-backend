@@ -14,23 +14,28 @@ import io.vertx.ext.web.handler.BodyHandler;
 /*
  * @author <a href="mailto:somai.alexandru@gmail.com">Alexandru Somai</a>
  */
-public class TodoREST extends AbstractVerticle {
+public class Server extends AbstractVerticle {
 
-    private static final String TODOS = "todos";
+    private static final String TODOS_COLLECTION = "todos";
 
+    private Router router;
     private MongoClient mongo;
 
     // Convenience method so you can run it in your IDE
     public static void main(String[] args) {
-        Launcher.main(new String[]{"run", TodoREST.class.getName()});
+        Launcher.main(new String[]{"run", Server.class.getName()});
     }
 
     @Override
     public void start(Future<Void> future) {
+        router = Router.router(vertx);
         mongo = MongoClient.createShared(vertx, config());
+        setUpCors();
+        setUpRoutes();
+        createHttpServer(future);
+    }
 
-        Router router = Router.router(vertx);
-
+    private void setUpCors() {
         router.route().handler(BodyHandler.create());
         router.route().handler((routingContext) -> {
             routingContext.response()
@@ -40,7 +45,9 @@ public class TodoREST extends AbstractVerticle {
                     .putHeader("Access-Control-Max-Age", "3600");
             routingContext.next();
         });
+    }
 
+    private void setUpRoutes() {
         router.get("/").handler((context) -> context.reroute("/todos"));
         router.get("/todos").handler(this::getAllTodos);
         router.get("/todos/:todoId").handler(this::getTodo);
@@ -50,7 +57,9 @@ public class TodoREST extends AbstractVerticle {
         router.delete("/todos/").handler(this::deleteAllTodos);
         router.options("/todos").handler((handler) -> handler.response().end());
         router.options("/todos/:todoId").handler((handler) -> handler.response().end());
+    }
 
+    private void createHttpServer(Future<Void> future) {
         Integer port = 8080;
         String host = "localhost";
 
@@ -71,7 +80,7 @@ public class TodoREST extends AbstractVerticle {
     }
 
     private void getAllTodos(RoutingContext routingContext) {
-        mongo.find(TODOS, new JsonObject(), results -> {
+        mongo.find(TODOS_COLLECTION, new JsonObject(), results -> {
             JsonArray arr = new JsonArray();
             results.result().forEach(arr::add);
             routingContext.response()
@@ -85,7 +94,7 @@ public class TodoREST extends AbstractVerticle {
         if (id == null) {
             sendError(400, routingContext.response());
         } else {
-            mongo.findOne(TODOS, new JsonObject().put("_id", id), new JsonObject(), result -> {
+            mongo.findOne(TODOS_COLLECTION, new JsonObject().put("_id", id), new JsonObject(), result -> {
                 if (result.succeeded()) {
                     routingContext.response()
                             .putHeader("content-type", "application/json; charset=utf-8")
@@ -104,23 +113,26 @@ public class TodoREST extends AbstractVerticle {
         if (todo == null) {
             sendError(400, response);
         } else {
-            mongo.insert(TODOS, todo, insertResult -> {
+            mongo.insert(TODOS_COLLECTION, todo, insertResult -> {
                 if (insertResult.succeeded()) {
                     String id = insertResult.result();
                     todo.put("_id", id);
                     todo.put("url", routingContext.request().absoluteURI() + "/" + id);
                     todo.put("completed", false);
 
-                    mongo.update(TODOS, new JsonObject().put("_id", id), new JsonObject().put("$set", todo), updateResult -> {
-                        if (updateResult.succeeded()) {
-                            response.setStatusCode(201)
-                                    .putHeader("content-type", "application/json; charset=utf-8")
-                                    .end(todo.encodePrettily());
-                        }
-                        if (updateResult.failed()) {
-                            sendError(500, routingContext.response());
-                        }
-                    });
+                    mongo.update(TODOS_COLLECTION,
+                            new JsonObject().put("_id", id),
+                            new JsonObject().put("$set", todo),
+                            updateResult -> {
+                                if (updateResult.succeeded()) {
+                                    response.setStatusCode(201)
+                                            .putHeader("content-type", "application/json; charset=utf-8")
+                                            .end(todo.encodePrettily());
+                                }
+                                if (updateResult.failed()) {
+                                    sendError(500, routingContext.response());
+                                }
+                            });
                 }
                 if (insertResult.failed()) {
                     sendError(500, routingContext.response());
@@ -135,10 +147,10 @@ public class TodoREST extends AbstractVerticle {
         if (id == null || jsonObject == null) {
             sendError(400, routingContext.response());
         } else {
-            mongo.update(TODOS,
+            mongo.update(TODOS_COLLECTION,
                     new JsonObject().put("_id", id),
-                    new JsonObject().put("$set", jsonObject)
-                    , result -> {
+                    new JsonObject().put("$set", jsonObject),
+                    result -> {
                         if (result.succeeded()) {
                             getTodo(routingContext);
                         }
@@ -154,7 +166,7 @@ public class TodoREST extends AbstractVerticle {
         if (id == null) {
             sendError(400, routingContext.response());
         } else {
-            mongo.removeOne(TODOS, new JsonObject().put("_id", id), result -> {
+            mongo.removeOne(TODOS_COLLECTION, new JsonObject().put("_id", id), result -> {
                 if (result.succeeded()) {
                     routingContext.response().end();
                 }
@@ -166,7 +178,7 @@ public class TodoREST extends AbstractVerticle {
     }
 
     private void deleteAllTodos(RoutingContext routingContext) {
-        mongo.dropCollection(TODOS, result -> {
+        mongo.dropCollection(TODOS_COLLECTION, result -> {
             if (result.succeeded()) {
                 routingContext.response().end();
             }
@@ -175,6 +187,7 @@ public class TodoREST extends AbstractVerticle {
             }
         });
     }
+
     private static void sendError(int statusCode, HttpServerResponse response) {
         response.setStatusCode(statusCode).end();
     }
