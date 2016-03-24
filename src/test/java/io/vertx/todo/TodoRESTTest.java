@@ -9,6 +9,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -16,6 +17,7 @@ import org.junit.runner.RunWith;
  * @author <a href="mailto:pmlopes@gmail.com">Paulo Lopes</a>
  */
 @RunWith(VertxUnitRunner.class)
+@Ignore
 public class TodoRESTTest {
 
     private Vertx vertx;
