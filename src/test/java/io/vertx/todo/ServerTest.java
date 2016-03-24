@@ -24,7 +24,7 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 
 /*
- * @author <a href="mailto:pmlopes@gmail.com">Paulo Lopes</a>
+ * @author <a href="mailto:somai.alexandru@gmail.com">Alexandru Somai</a>
  */
 @RunWith(VertxUnitRunner.class)
 public class ServerTest {
@@ -77,15 +77,59 @@ public class ServerTest {
     public void testAddTodo(TestContext context) {
         final Async async = context.async();
 
+        String newTitle = "newTitle";
         HttpClientRequest request = vertx.createHttpClient().post(8080, "localhost", "/todos",
                 response ->
                     response.handler(body -> {
                         JsonObject jsonObject = body.toJsonObject();
-                        assertThat(context, jsonObject.getString("title"), is("title"));
+                        assertThat(context, jsonObject.getString("title"), is(newTitle));
                         assertThat(context, jsonObject.getBoolean("completed"), is(false));
                         assertThat(context, jsonObject.getString("url"), is(not("")));
                         async.complete();
                     }));
-        request.end(new JsonObject().put("title", "title").encodePrettily());
+        request.end(new JsonObject().put("title", newTitle).encodePrettily());
+    }
+
+    @Test
+    public void testEditTodo(TestContext context) {
+        final Async async = context.async();
+
+        HttpClientRequest addRequest = vertx.createHttpClient().post(8080, "localhost", "/todos",
+                addResponse ->
+                        addResponse.handler(addBody -> {
+                            String editedTitle = "editedTitle";
+                            String id = addBody.toJsonObject().getString("_id");
+                            String requestUri = "/todos" + "/" + id;
+                            HttpClientRequest editRequest = vertx.createHttpClient().put(8080, "localhost", requestUri, editResponse ->
+                                    editResponse.handler(editBody -> {
+                                        assertThat(context, editBody.toJsonObject().getString("title"), is(editedTitle));
+                                        async.complete();
+                                    }));
+                            editRequest.end(new JsonObject().put("title", editedTitle).encodePrettily());
+                        }));
+        addRequest.end(new JsonObject().put("title", "title").encodePrettily());
+    }
+
+    @Test
+    public void testDeleteTodo(TestContext context) {
+        final Async async = context.async();
+
+        HttpClientRequest addRequest = vertx.createHttpClient().post(8080, "localhost", "/todos",
+                addResponse ->
+                        addResponse.handler(addBody -> {
+                            String id = addBody.toJsonObject().getString("_id");
+                            String requestUri = "/todos" + "/" + id;
+                            HttpClientRequest deleteRequest = vertx.createHttpClient().delete(8080, "localhost", requestUri, getResponse ->
+                            {
+                                assertThat(context, getResponse.statusCode(), is(200));
+                                vertx.createHttpClient().getNow(8080, "localhost", requestUri, response ->
+                                {
+                                    assertThat(context, response.statusCode(), is(404));
+                                    async.complete();
+                                });
+                            });
+                            deleteRequest.end();
+                        }));
+        addRequest.end(new JsonObject().put("title", "title").encodePrettily());
     }
 }

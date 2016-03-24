@@ -53,6 +53,7 @@ public class Server extends AbstractVerticle {
         router.get("/todos/:todoId").handler(this::getTodo);
         router.post("/todos").handler(this::addTodo);
         router.patch("/todos/:todoId").handler(this::updateTodo);
+        router.put("/todos/:todoId").handler(this::updateTodo);
         router.delete("/todos/:todoId").handler(this::deleteTodo);
         router.delete("/todos/").handler(this::deleteAllTodos);
         router.options("/todos").handler((handler) -> handler.response().end());
@@ -96,9 +97,12 @@ public class Server extends AbstractVerticle {
         } else {
             mongo.findOne(TODOS_COLLECTION, new JsonObject().put("_id", id), new JsonObject(), result -> {
                 if (result.succeeded()) {
-                    routingContext.response()
-                            .putHeader("content-type", "application/json; charset=utf-8")
-                            .end(result.result().encodePrettily());
+                    if (result.result() == null) {
+                        sendError(404, routingContext.response());
+                    } else
+                        routingContext.response()
+                                .putHeader("content-type", "application/json; charset=utf-8")
+                                .end(result.result().encodePrettily());
                 }
                 if (result.failed()) {
                     sendError(500, routingContext.response());
