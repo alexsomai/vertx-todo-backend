@@ -6,6 +6,8 @@ import io.vertx.core.Launcher;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -16,6 +18,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  */
 public class Server extends AbstractVerticle {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(Server.class);
     private static final String TODOS_COLLECTION = "todos";
 
     private Router router;
@@ -29,10 +32,28 @@ public class Server extends AbstractVerticle {
     @Override
     public void start(Future<Void> future) {
         router = Router.router(vertx);
-        mongo = MongoClient.createShared(vertx, config());
+        configMongo();
         setUpCors();
         setUpRoutes();
         createHttpServer(future);
+    }
+
+    private void configMongo() {
+        String dbName = "demo";
+        String uri = "mongodb://localhost:27017";
+
+        // needed to be able to run the app on https://openshift.redhat.com
+        String mongoDbUrl = System.getenv("OPENSHIFT_MONGODB_DB_URL");
+        if (mongoDbUrl != null) {
+            uri = mongoDbUrl;
+            dbName = System.getenv("OPENSHIFT_APP_NAME");
+        }
+
+        JsonObject mongoConfig = new JsonObject()
+                .put("connection_string", uri)
+                .put("db_name", dbName);
+
+        mongo = MongoClient.createShared(vertx, mongoConfig);
     }
 
     private void setUpCors() {
@@ -82,11 +103,16 @@ public class Server extends AbstractVerticle {
 
     private void getAllTodos(RoutingContext routingContext) {
         mongo.find(TODOS_COLLECTION, new JsonObject(), results -> {
-            JsonArray arr = new JsonArray();
-            results.result().forEach(arr::add);
-            routingContext.response()
-                    .putHeader("content-type", "application/json; charset=utf-8")
-                    .end(arr.encodePrettily());
+            if (results.succeeded()) {
+                JsonArray arr = new JsonArray();
+                results.result().forEach(arr::add);
+                routingContext.response()
+                        .putHeader("content-type", "application/json; charset=utf-8")
+                        .end(arr.encodePrettily());
+            }
+            if (results.failed()) {
+                sendError(500, routingContext.response(), results.cause());
+            }
         });
     }
 
@@ -105,7 +131,7 @@ public class Server extends AbstractVerticle {
                                 .end(result.result().encodePrettily());
                 }
                 if (result.failed()) {
-                    sendError(500, routingContext.response());
+                    sendError(500, routingContext.response(), result.cause());
                 }
             });
         }
@@ -124,9 +150,8 @@ public class Server extends AbstractVerticle {
                     todo.put("url", routingContext.request().absoluteURI() + "/" + id);
                     todo.put("completed", false);
 
-                    mongo.update(TODOS_COLLECTION,
-                            new JsonObject().put("_id", id),
-                            new JsonObject().put("$set", todo),
+                    mongo.save(TODOS_COLLECTION,
+                            todo,
                             updateResult -> {
                                 if (updateResult.succeeded()) {
                                     response.setStatusCode(201)
@@ -134,12 +159,12 @@ public class Server extends AbstractVerticle {
                                             .end(todo.encodePrettily());
                                 }
                                 if (updateResult.failed()) {
-                                    sendError(500, routingContext.response());
+                                    sendError(500, routingContext.response(), updateResult.cause());
                                 }
                             });
                 }
                 if (insertResult.failed()) {
-                    sendError(500, routingContext.response());
+                    sendError(500, routingContext.response(), insertResult.cause());
                 }
             });
         }
@@ -159,7 +184,7 @@ public class Server extends AbstractVerticle {
                             getTodo(routingContext);
                         }
                         if (result.failed()) {
-                            sendError(500, routingContext.response());
+                            sendError(500, routingContext.response(), result.cause());
                         }
                     });
         }
@@ -175,7 +200,7 @@ public class Server extends AbstractVerticle {
                     routingContext.response().end();
                 }
                 if (result.failed()) {
-                    sendError(500, routingContext.response());
+                    sendError(500, routingContext.response(), result.cause());
                 }
             });
         }
@@ -187,12 +212,19 @@ public class Server extends AbstractVerticle {
                 routingContext.response().end();
             }
             if (result.failed()) {
-                sendError(500, routingContext.response());
+                sendError(500, routingContext.response(), result.cause());
             }
         });
     }
 
     private static void sendError(int statusCode, HttpServerResponse response) {
+        sendError(statusCode, response, null);
+    }
+
+    private static void sendError(int statusCode, HttpServerResponse response, Throwable cause) {
+        if (cause != null) {
+            LOGGER.error(cause.getMessage(), cause);
+        }
         response.setStatusCode(statusCode).end();
     }
 }
