@@ -43,10 +43,12 @@ public class Server extends AbstractVerticle {
         String uri = "mongodb://localhost:27017";
 
         // needed to be able to run the app on https://www.heroku.com/
-        String mongoDbUrl = System.getenv("MONGODB_URI");
+        // String mongoDbUrl = System.getenv("MONGODB_URI");
+        String mongoDbUrl = "mongodb://heroku_jnz3xpt3:rgln90un4i0iau52sns1s3e5d8@ds263837.mlab.com:63837";
         if (mongoDbUrl != null) {
             uri = mongoDbUrl;
-            dbName = System.getenv("MONGODB_DB_NAME");
+            // dbName = System.getenv("MONGODB_DB_NAME");
+            dbName = "heroku_jnz3xpt3";
         }
 
         JsonObject mongoConfig = new JsonObject()
