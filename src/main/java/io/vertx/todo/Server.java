@@ -46,7 +46,7 @@ public class Server extends AbstractVerticle {
         String mongoDbUrl = System.getenv("MONGODB_URI");
         if (mongoDbUrl != null) {
             uri = mongoDbUrl;
-            dbName = "heroku_jnz3xpt3";
+            dbName = System.getenv("MONGODB_DB_NAME");
         }
 
         JsonObject mongoConfig = new JsonObject()
