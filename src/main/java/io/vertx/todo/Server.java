@@ -82,19 +82,12 @@ public class Server extends AbstractVerticle {
     }
 
     private void createHttpServer(Future<Void> future) {
+        // needed to be able to run the app on https://www.heroku.com/
         Integer port = Integer.getInteger("http.port");
         if (port == null) {
             port = 8080;
         }
         String host = "0.0.0.0";
-
-        // needed to be able to run the app on https://www.heroku.com/
-//         final String openShiftVertxIP = System.getenv("OPENSHIFT_VERTX_IP");
-//         if (openShiftVertxIP != null) {
-//             port = Integer.getInteger("http.port");
-//             host = System.getProperty("http.address");
-//         }
-        
 
         vertx.createHttpServer().requestHandler(router::accept).listen(port, host, result -> {
             if (result.succeeded()) {
