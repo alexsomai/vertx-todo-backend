@@ -43,12 +43,10 @@ public class Server extends AbstractVerticle {
         String uri = "mongodb://localhost:27017";
 
         // needed to be able to run the app on https://www.heroku.com/
-        // String mongoDbUrl = System.getenv("MONGODB_URI");
-        String mongoDbUrl = "mongodb://heroku_jnz3xpt3:rgln90un4i0iau52sns1s3e5d8@ds263837.mlab.com:63837";
+        String mongoDbUrl = System.getenv("MONGODB_URI");
         if (mongoDbUrl != null) {
             uri = mongoDbUrl;
-            // dbName = System.getenv("MONGODB_DB_NAME");
-            dbName = "heroku_jnz3xpt3";
+            dbName = System.getenv("MONGODB_DB_NAME");
         }
 
         JsonObject mongoConfig = new JsonObject()
@@ -84,15 +82,19 @@ public class Server extends AbstractVerticle {
     }
 
     private void createHttpServer(Future<Void> future) {
-        Integer port = 8080;
-        String host = "localhost";
-
-        // needed to be able to run the app on https://openshift.redhat.com
-        final String openShiftVertxIP = System.getenv("OPENSHIFT_VERTX_IP");
-        if (openShiftVertxIP != null) {
-            port = Integer.getInteger("http.port");
-            host = System.getProperty("http.address");
+        Integer port = Integer.getInteger("http.port");
+        if (port == null) {
+            port = 8080;
         }
+        String host = "0.0.0.0";
+
+        // needed to be able to run the app on https://www.heroku.com/
+//         final String openShiftVertxIP = System.getenv("OPENSHIFT_VERTX_IP");
+//         if (openShiftVertxIP != null) {
+//             port = Integer.getInteger("http.port");
+//             host = System.getProperty("http.address");
+//         }
+        
 
         vertx.createHttpServer().requestHandler(router::accept).listen(port, host, result -> {
             if (result.succeeded()) {
