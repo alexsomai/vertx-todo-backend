@@ -1,1 +1,1 @@
-web: mvn clean package exec:exec@run-app
+web: java -jar target/todo-backend-1.0-SNAPSHOT-fat.jar
