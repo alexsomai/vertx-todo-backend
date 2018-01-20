@@ -42,11 +42,11 @@ public class Server extends AbstractVerticle {
         String dbName = "demo";
         String uri = "mongodb://localhost:27017";
 
-        // needed to be able to run the app on https://openshift.redhat.com
-        String mongoDbUrl = System.getenv("OPENSHIFT_MONGODB_DB_URL");
+        // needed to be able to run the app on https://www.heroku.com/
+        String mongoDbUrl = System.getenv("MONGODB_URI");
         if (mongoDbUrl != null) {
             uri = mongoDbUrl;
-            dbName = System.getenv("OPENSHIFT_APP_NAME");
+            dbName = "heroku_jnz3xpt3";
         }
 
         JsonObject mongoConfig = new JsonObject()
