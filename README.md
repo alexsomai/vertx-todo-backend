@@ -8,8 +8,8 @@ This project is an implementation of [Todo-Backend](http://www.todobackend.com/)
 
 ## Todo-Backend
 The application is built according to the Todo-Backend specifications.   
-It passes all the [automated spec tests](http://www.todobackend.com/specs/index.html?http://demo-todobackend.rhcloud.com/todos).  
-The backend may be tested using the available [client app](http://www.todobackend.com/client/index.html?http://demo-todobackend.rhcloud.com/).
+It passes all the [automated spec tests](http://www.todobackend.com/specs/index.html?https://demo-todobackend-vertx.herokuapp.com/todos).  
+The backend may be tested using the available [client app](http://www.todobackend.com/client/index.html?https://demo-todobackend-vertx.herokuapp.com/todos).
 
 ## OpenShift
-The project is deployed on OpenShift. It can be accessed [here](http://demo-todobackend.rhcloud.com/todos).
+The project is deployed on [Heroku](https://heroku.com). It can be accessed [here](https://demo-todobackend-vertx.herokuapp.com/todos).
